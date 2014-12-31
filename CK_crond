@@ -1,0 +1,49 @@
+#!/bin/bash
+
+#configuration
+PIDFILE="/var/run/crond.pid"
+COMMAND_START="/etc/init.d/cron"
+LOGDIR="/home/cc/log/ck_cron.log"
+SCRIPTPIDFILE="/tmp/ck_crond.pid"
+SCRIPTFILE="/home/cc/script/CK_crond"
+
+function PROGRAM_START(){
+    $1 start;
+}
+
+function CHECK_PID(){
+    if ps -p $1 >/dev/null ;then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function LOG(){
+    echo "`date +'[%Y-%m-%d %H:%M:%S]'` $1" >> $LOGDIR
+}
+
+if [ ! -f $SCRIPTPIDFILE ]; then
+    LOG "$SCRIPTPIDFILE not exsit"
+    echo $$ > $SCRIPTPIDFILE
+    exit
+fi
+now=`date +"%s"`
+filenow=`stat -c "%Y" $SCRIPTPIDFILE`
+timedif=`expr $now - $filenow`
+if [ $timedif -lt 300 -a -f $SCRIPTPIDFILE ];then
+    LOG "cron script running"
+    exit 
+fi
+
+while ((1));
+do
+    echo $$ > $SCRIPTPIDFILE
+    PID=`cat $PIDFILE`
+    if CHECK_PID $PID ;then
+        LOG "cron ck ok"
+    else
+        LOG "cron start"
+        PROGRAM_START $COMMAND_START
+    fi
+    sleep 60
